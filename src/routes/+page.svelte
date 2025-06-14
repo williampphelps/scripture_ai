@@ -5,7 +5,7 @@
 	const markdownParser = new Marked().use(markedFootnote());
 	let search_query = $state('');
 	let num_results = $state(10);
-	let model = $state('mxbai-embed-large');
+	let model = $state('nomic-embed-text-prefix');
 	let chat_answers = $state('# Enter your question below:');
 
 	async function getScriptures(e: Event) {
@@ -60,7 +60,8 @@
 		<div class="flex flex-col gap-2">
 			<select class="select w-full sm:w-auto" bind:value={model} name="model">
 				<option disabled>Select Embedding Model</option>
-				<option value="mxbai-embed-large" selected>mxbai-embed-large</option>
+				<option value="nomic-embed-text-prefix" selected>nomic-embed-text-prefix</option>
+				<option value="mxbai-embed-large">mxbai-embed-large</option>
 				<option value="nomic-embed-text">nomic-embed-text</option>
 				<option value="bge-m3">bge-m3</option>
 				<option value="snowflake-arctic-embed">snowflake-arctic-embed</option>

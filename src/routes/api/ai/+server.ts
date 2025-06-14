@@ -10,14 +10,22 @@ export const POST: RequestHandler = async ({ request }) => {
 
   const { query, num_results, model } = await request.json();
 
+  let embedModel = model;
+  let embedQuery = query;
+
+  if (model == "nomic-embed-text-prefix") {
+    embedModel = "nomic-embed-text";
+    embedQuery = "search_query: " + query;
+  }
+
   const embeddingsResponse = await fetch(OLLAMA_URL + "/api/embeddings", {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: model,
-      prompt: query,
+      model: embedModel,
+      prompt: embedQuery,
       stream: false
     })
   });
@@ -43,6 +51,8 @@ export const POST: RequestHandler = async ({ request }) => {
     embeddingParam = "embeddings.bgeM3";
   } else if (model == "snowflake-arctic-embed") {
     embeddingParam = "embeddings.snowflakeArcticEmbed";
+  } else if (model == "nomic-embed-text-prefix") {
+    embeddingParam = "embeddings.nomicEmbedTextPrefix";
   }
 
   const result = await db.query("SELECT id, chapter.name as chapterName, chapter.book.name as bookName, chapter.summary as chapterSummary, chapter, content, number, vector::similarity::cosine(" + embeddingParam + ", $query_embeddings) as similarity FROM verse ORDER BY similarity DESC LIMIT $num_results;", {
