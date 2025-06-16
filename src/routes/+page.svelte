@@ -5,7 +5,6 @@
 	const markdownParser = new Marked().use(markedFootnote());
 	let search_query = $state('');
 	let num_results = $state(10);
-	let model = $state('nomic-embed-text-prefix');
 	let chat_answers = $state('# Enter your question below:');
 
 	async function getScriptures(e: Event) {
@@ -18,29 +17,52 @@
 			},
 			body: JSON.stringify({
 				query: search_query,
-				num_results: num_results,
-				model: model
+				num_results: num_results
 			})
 		});
 		const searchData = await searchResponse.json();
 
 		console.log(searchData);
 
+		// create new array by grouping verses by chapter and then sort by verse number
+
+		const groupedVerses = searchData.verses.reduce((acc, verse) => {
+			const key = `${verse.bookName} ${verse.chapterName}`;
+			if (!acc[key]) acc[key] = [];
+			acc[key].push(verse);
+			return acc;
+		}, {});
+
+		const sortedVerses = Object.values(groupedVerses).map((chapterVerses) => {
+			return chapterVerses.sort((a, b) => a.number - b.number);
+		});
+
+		console.log(sortedVerses);
+
 		let new_answers = '# ' + search_query + '\n\n';
 
-		for (let i = 0; i < searchData.verses.length; i++) {
-			const verse = searchData.verses[i];
+		for (let i = 0; i < sortedVerses.length; i++) {
+			const verses = sortedVerses[i];
+			const numbers = verses.map((verse) => verse.number).join(',');
+			new_answers += '---\n\n## ' + verses[0].bookName + ' ' + verses[0].chapterName + '\n\n';
+
+			new_answers += '*' + verses[0].chapterSummary + '*\n\n';
+			for (let j = 0; j < verses.length; j++) {
+				new_answers += `${verses[j].content.replace(/\[\^.*?\]/g, '')}\n\n`;
+			}
 			new_answers +=
-				'## ' +
-				verse.bookName +
-				' ' +
-				verse.chapterName +
-				'\n\n' +
-				verse.content.replace(/\[\^.*?\]/g, '') +
-				'\n\n' +
-				'**' +
-				(verse.similarity * 100).toFixed(2) +
-				'% Match**\n\n';
+				'<a href="https://www.churchofjesuschrist.org/study/scriptures/' +
+				verses[0].workSlug +
+				'/' +
+				verses[0].bookSlug +
+				'/' +
+				verses[0].chapterSlug +
+				'&id=p' +
+				numbers +
+				'#p' +
+				(verses[0].number - 1) +
+				'" target="_blank">View on ChurchOfJesusChrist.org</a>\n\n';
+			new_answers += '\n\n';
 		}
 		chat_answers = new_answers;
 	}
@@ -57,28 +79,19 @@
 		onsubmit={getScriptures}
 		class="flex flex-col sm:flex-row gap-4 justify-self-end py-8 max-w-full px-8"
 	>
-		<div class="flex flex-col gap-2">
-			<select class="select w-full sm:w-auto" bind:value={model} name="model">
-				<option disabled>Select Embedding Model</option>
-				<option value="nomic-embed-text-prefix" selected>nomic-embed-text-prefix</option>
-				<option value="mxbai-embed-large">mxbai-embed-large</option>
-				<option value="nomic-embed-text">nomic-embed-text</option>
-				<option value="bge-m3">bge-m3</option>
-				<option value="snowflake-arctic-embed">snowflake-arctic-embed</option>
-			</select>
-
-			<label class="input w-full sm:w-52" for="num_results">
-				<input type="number" bind:value={num_results} min="1" name="num_results" />
-				<span class="label">results</span>
-			</label>
-		</div>
-
 		<input
 			bind:value={search_query}
 			name="search_query"
 			placeholder="Enter question here... (example: What is faith?)"
 			class="input w-xl max-w-full shrink"
 		/>
+		<div class="flex flex-col gap-2">
+			<label class="input w-full sm:w-52" for="num_results">
+				<input type="number" bind:value={num_results} min="1" name="num_results" />
+				<span class="label">results</span>
+			</label>
+		</div>
+
 		<button type="submit" class="btn btn-primary">Search</button>
 	</form>
 </div>

@@ -8,15 +8,9 @@ import { SURREAL_NS, SURREAL_DB, SURREAL_USERNAME, SURREAL_PASSWORD, SURREAL_URL
 export const POST: RequestHandler = async ({ request }) => {
   const db = new Surreal();
 
-  const { query, num_results, model } = await request.json();
+  const { query, num_results } = await request.json();
 
-  let embedModel = model;
-  let embedQuery = query;
-
-  if (model == "nomic-embed-text-prefix") {
-    embedModel = "nomic-embed-text";
-    embedQuery = "search_query: " + query;
-  }
+  const embedQuery = "search_query: " + query;
 
   const embeddingsResponse = await fetch(OLLAMA_URL + "/api/embeddings", {
     method: 'POST',
@@ -24,7 +18,7 @@ export const POST: RequestHandler = async ({ request }) => {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      model: embedModel,
+      model: "nomic-embed-text",
       prompt: embedQuery,
       stream: false
     })
@@ -41,21 +35,7 @@ export const POST: RequestHandler = async ({ request }) => {
     }
   });
 
-  let embeddingParam = "mxbai-embed-large";
-
-  if (model == "mxbai-embed-large") {
-    embeddingParam = "embeddings.mxbai";
-  } else if (model == "nomic-embed-text") {
-    embeddingParam = "embeddings.nomicEmbedText";
-  } else if (model == "bge-m3") {
-    embeddingParam = "embeddings.bgeM3";
-  } else if (model == "snowflake-arctic-embed") {
-    embeddingParam = "embeddings.snowflakeArcticEmbed";
-  } else if (model == "nomic-embed-text-prefix") {
-    embeddingParam = "embeddings.nomicEmbedTextPrefix";
-  }
-
-  const result = await db.query("SELECT id, chapter.name as chapterName, chapter.book.name as bookName, chapter.summary as chapterSummary, chapter, content, number, vector::similarity::cosine(" + embeddingParam + ", $query_embeddings) as similarity FROM verse WHERE " + embeddingParam + " <|" + num_results + "|> $query_embeddings ORDER BY similarity DESC;", {
+  const result = await db.query("SELECT id, chapter.name as chapterName, chapter.book.name as bookName, chapter.summary as chapterSummary, chapter, content, number, vector::similarity::cosine(embeddings.nomicEmbedTextPrefix, $query_embeddings) as similarity, chapter.slug as chapterSlug, chapter.book.slug as bookSlug, chapter.book.work.slug as workSlug FROM verse WHERE embeddings.nomicEmbedTextPrefix <|" + num_results + "|> $query_embeddings ORDER BY similarity DESC;", {
     query_embeddings: embeddingsData.embedding
   });
 
