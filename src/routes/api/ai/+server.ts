@@ -55,10 +55,11 @@ export const POST: RequestHandler = async ({ request }) => {
     embeddingParam = "embeddings.nomicEmbedTextPrefix";
   }
 
-  const result = await db.query("SELECT id, chapter.name as chapterName, chapter.book.name as bookName, chapter.summary as chapterSummary, chapter, content, number, vector::similarity::cosine(" + embeddingParam + ", $query_embeddings) as similarity FROM verse WHERE " + embeddingParam + " <|100|> $query_embeddings ORDER BY similarity DESC LIMIT $num_results;", {
-    query_embeddings: embeddingsData.embedding,
-    num_results: num_results
+  const result = await db.query("SELECT id, chapter.name as chapterName, chapter.book.name as bookName, chapter.summary as chapterSummary, chapter, content, number, vector::similarity::cosine(" + embeddingParam + ", $query_embeddings) as similarity FROM verse WHERE " + embeddingParam + " <|" + num_results + "|> $query_embeddings ORDER BY similarity DESC;", {
+    query_embeddings: embeddingsData.embedding
   });
+
+  // console.log(result);
 
   return json({ verses: result[0] });
 
