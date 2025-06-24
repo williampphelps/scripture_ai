@@ -10,7 +10,12 @@
 	type Verse = {
 		id: string;
 		bookName: string;
+		chapter: string;
 		chapterName: string;
+		chapterSummary: string;
+		chapterSlug: string;
+		bookSlug: string;
+		workSlug: string;
 		number: number;
 		text: string;
 	};
@@ -63,15 +68,17 @@
 				for (let j = 0; j < verses.length; j++) {
 					new_answers += `${verses[j].content.replace(/\[\^.*?\]/g, '')}\n\n`;
 				}
+				console.log(numbers);
+				console.log(verses[0].number - 1);
+				console.log(verses[0]);
 				new_answers +=
-					'<a href="https://www.churchofjesuschrist.org/study/scriptures/' +
+					'<a href="https://www.churchofjesuschrist.org/study/' +
 					verses[0].workSlug +
 					'/' +
 					verses[0].bookSlug +
 					'/' +
 					verses[0].chapterSlug +
-					'&id=p' +
-					numbers +
+					(verses[0].workSlug.includes('general-conference') ? '' : '&id=p' + numbers) +
 					'#p' +
 					(verses[0].number - 1) +
 					'" target="_blank">View on ChurchOfJesusChrist.org</a>\n\n';
