@@ -12,3 +12,4 @@ A specialized AI-powered question-answering system that uses vector embeddings t
 - The Book of Mormon
 - Doctrine and Covenants
 - Pearl of Great Price
+- General Conference Talks
