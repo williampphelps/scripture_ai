@@ -23,7 +23,7 @@
 	async function getScriptures(e: Event) {
 		e.preventDefault();
 		try {
-			chat_answers = '# Finding relevant verses... \n\n This may take a few seconds...';
+			chat_answers = '# Finding relevant passages... \n\n';
 			let searchResponse = await fetch('/api/ai', {
 				method: 'POST',
 				headers: {
