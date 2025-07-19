@@ -95,7 +95,7 @@
 
 <div class="flex flex-col items-center justify-between h-screen">
 	<div class="prose py-8">
-		<h1>Scripture AI</h1>
+		<h1>Scripture Finder</h1>
 	</div>
 	<div class="prose h-full overflow-auto py-8 px-8">
 		{@html markdownParser.parse(chat_answers)}
