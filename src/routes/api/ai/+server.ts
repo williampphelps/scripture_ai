@@ -8,7 +8,7 @@ import { SURREAL_NS, SURREAL_DB, SURREAL_USERNAME, SURREAL_PASSWORD, SURREAL_URL
 export const POST: RequestHandler = async ({ request }) => {
   const db = new Surreal();
 
-  const { query, num_results } = await request.json();
+  const { query, num_results, selected_works } = await request.json();
 
   // ensure query is not empty
   if (!query) {
@@ -53,13 +53,34 @@ export const POST: RequestHandler = async ({ request }) => {
       }
     });
 
-    const result = await db.query("SELECT id, chapter.name as chapterName, chapter.book.name as bookName, chapter.summary as chapterSummary, chapter, content, number, vector::similarity::cosine(embeddings.nomicEmbedTextPrefix, $query_embeddings) as similarity, chapter.slug as chapterSlug, chapter.book.slug as bookSlug, chapter.book.work.slug as workSlug FROM verse WHERE embeddings.nomicEmbedTextPrefix <|" + num_results + "|> $query_embeddings ORDER BY similarity DESC;", {
-      query_embeddings: embeddingsData.embedding
-    });
+    let results = [];
+
+    // loop through selected works
+    for (const work of selected_works) {
+      const result = await db.query("$work_record = <record>$work; SELECT id, chapter.name as chapterName, chapter.book.name as bookName, chapter.summary as chapterSummary, chapter, content, number, vector::similarity::cosine(embeddings.nomicEmbedTextPrefix, $query_embeddings) as similarity, chapter.slug as chapterSlug, chapter.book.slug as bookSlug, chapter.book.work.slug as workSlug FROM verse WHERE work = $work_record AND embeddings.nomicEmbedTextPrefix <|" + num_results + "|> $query_embeddings ORDER BY similarity DESC;", {
+        query_embeddings: embeddingsData.embedding,
+        work: work,
+      });
+
+      results.push(result[1]);
+    }
+
+    // flatten results
+    results = results.flat();
+
+    console.log(results)
+
+    // sort results by similarity
+    results.sort((a, b) => b.similarity - a.similarity);
+
+    // limit results to num_results
+    results = results.slice(0, num_results);
 
     // console.log(result);
 
-    return json({ verses: result[0] });
+    // console.log(result);
+
+    return json({ verses: results });
   } catch (e) {
     console.error(e);
     return new Response('An error occurred', { status: 500 });

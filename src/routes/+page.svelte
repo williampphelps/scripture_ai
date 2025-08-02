@@ -1,11 +1,14 @@
 <script lang="ts">
 	import { Marked } from 'marked';
 	import markedFootnote from 'marked-footnote';
+	import { onMount } from 'svelte';
 
 	const markdownParser = new Marked().use(markedFootnote());
 	let search_query = $state('');
 	let num_results = $state(10);
 	let chat_answers = $state('# Enter your question below:');
+	let works = $state([]);
+	let selectedWorks = $state([]);
 
 	type Verse = {
 		id: string;
@@ -20,6 +23,16 @@
 		text: string;
 	};
 
+	onMount(async () => {
+		let results = await fetch('/api/work');
+
+		let resultData = await results.json();
+
+		works = resultData.works;
+
+		selectedWorks = works.map((work) => work.id);
+	});
+
 	async function getScriptures(e: Event) {
 		e.preventDefault();
 		try {
@@ -31,7 +44,8 @@
 				},
 				body: JSON.stringify({
 					query: search_query,
-					num_results: num_results
+					num_results: num_results,
+					selected_works: selectedWorks
 				})
 			});
 
@@ -93,38 +107,51 @@
 	}
 </script>
 
-<div class="flex flex-col items-center justify-between h-screen">
-	<div class="prose py-8">
-		<h1>Scripture Finder</h1>
-	</div>
-	<div class="prose h-full overflow-auto py-8 px-8">
-		{@html markdownParser.parse(chat_answers)}
-	</div>
-	<form
-		onsubmit={getScriptures}
-		class="flex flex-col sm:flex-row gap-4 justify-self-end py-8 max-w-full px-8"
-	>
-		<input
-			bind:value={search_query}
-			name="search_query"
-			placeholder="Enter question here... (example: What is faith?)"
-			class="input w-xl max-w-full shrink"
-			required
-		/>
+<div class="flex flex-col sm:flex-row justify-around">
+	<div class="flex flex-col gap-8 p-8 sm:p-32">
 		<div class="flex flex-col gap-2">
-			<label class="input w-full sm:w-52" for="num_results">
-				<input
-					type="number"
-					bind:value={num_results}
-					min="1"
-					max="1000"
-					name="num_results"
-					required
-				/>
-				<span class="label">results</span>
-			</label>
+			{#each works as work (work.id)}
+				<label class="flex flex-row gap-2">
+					<input type="checkbox" value={work.id} bind:group={selectedWorks} />
+					{work.name}
+				</label>
+			{/each}
 		</div>
+	</div>
+	<div class="flex flex-col items-center justify-between h-screen">
+		<div class="prose py-8 hidden sm:block">
+			<h1>Scripture Finder</h1>
+		</div>
+		<div class="prose h-full overflow-auto py-8 px-8">
+			{@html markdownParser.parse(chat_answers)}
+		</div>
+		<form
+			onsubmit={getScriptures}
+			class="flex flex-col sm:flex-row gap-4 justify-self-end py-8 max-w-full px-8"
+		>
+			<input
+				bind:value={search_query}
+				name="search_query"
+				placeholder="Enter question here... (example: What is faith?)"
+				class="input w-xl max-w-full shrink"
+				required
+			/>
+			<div class="flex flex-col gap-2">
+				<label class="input w-full sm:w-52" for="num_results">
+					<input
+						type="number"
+						bind:value={num_results}
+						min="1"
+						max="1000"
+						name="num_results"
+						required
+					/>
+					<span class="label">results</span>
+				</label>
+			</div>
 
-		<button type="submit" class="btn btn-primary">Search</button>
-	</form>
+			<button type="submit" class="btn btn-primary">Search</button>
+		</form>
+	</div>
+	<div></div>
 </div>
