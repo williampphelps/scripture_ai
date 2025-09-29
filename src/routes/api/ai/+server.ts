@@ -1,12 +1,12 @@
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "@sveltejs/kit";
-import Surreal from 'surrealdb';
+import { getDb } from "$lib/server/surreal";
+import { RecordId } from "surrealdb";
 
-import { SURREAL_NS, SURREAL_DB, SURREAL_USERNAME, SURREAL_PASSWORD, SURREAL_URL, OLLAMA_URL } from "$env/static/private";
-
+import { OLLAMA_URL } from "$env/static/private";
 
 export const POST: RequestHandler = async ({ request }) => {
-  const db = new Surreal();
+  const db = await getDb();
 
   const { query, num_results, selected_works } = await request.json();
 
@@ -30,57 +30,28 @@ export const POST: RequestHandler = async ({ request }) => {
 
 
   try {
-    const embeddingsResponse = await fetch(OLLAMA_URL + "/api/embeddings", {
+    const embeddingsResponse = await fetch(OLLAMA_URL + "/api/embed", {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         model: "nomic-embed-text",
-        prompt: embedQuery,
-        stream: false
+        input: embedQuery
       })
     });
     const embeddingsData = await embeddingsResponse.json();
 
-    await db.connect(SURREAL_URL + '/rpc', {
-      namespace: SURREAL_NS,
-      database: SURREAL_DB,
-      auth: {
-        username: SURREAL_USERNAME,
-        password: SURREAL_PASSWORD,
-        namespace: SURREAL_NS
-      }
-    });
-
-    let results = [];
+    const workRecords = selected_works.map((w: string) => new RecordId(w.split(':')[0], w.split(':')[1]));
 
     // loop through selected works
-    for (const work of selected_works) {
-      const result = await db.query("$work_record = <record>$work; SELECT id, chapter.name as chapterName, chapter.book.name as bookName, chapter.summary as chapterSummary, chapter, content, number, vector::similarity::cosine(embeddings.nomicEmbedTextPrefix, $query_embeddings) as similarity, chapter.slug as chapterSlug, chapter.book.slug as bookSlug, chapter.book.work.slug as workSlug FROM verse WHERE work = $work_record AND embeddings.nomicEmbedTextPrefix <|" + num_results + "|> $query_embeddings ORDER BY similarity DESC;", {
-        query_embeddings: embeddingsData.embedding,
-        work: work,
-      });
+    const results = await db.query("SELECT id, chapter.name as chapterName, chapter.book.name as bookName, chapter.summary as chapterSummary, chapter, content, number, chapter.slug as chapterSlug, chapter.book.slug as bookSlug, chapter.book.work.slug as workSlug FROM verse WHERE work IN $work_records AND embeddings.nomicEmbedTextPrefix <|" + num_results + "|> $query_embeddings;", {
+      query_embeddings: embeddingsData.embeddings[0],
+      work_records: workRecords,
+    });
 
-      results.push(result[1]);
-    }
 
-    // flatten results
-    results = results.flat();
-
-    console.log(results)
-
-    // sort results by similarity
-    results.sort((a, b) => b.similarity - a.similarity);
-
-    // limit results to num_results
-    results = results.slice(0, num_results);
-
-    // console.log(result);
-
-    // console.log(result);
-
-    return json({ verses: results });
+    return json({ verses: results[0] });
   } catch (e) {
     console.error(e);
     return new Response('An error occurred', { status: 500 });
