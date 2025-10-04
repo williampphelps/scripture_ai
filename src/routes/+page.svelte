@@ -23,15 +23,41 @@
 		text: string;
 	};
 
+	let groupedWorks = $state({});
+
 	onMount(async () => {
 		let results = await fetch('/api/work');
-
 		let resultData = await results.json();
-
 		works = resultData.works;
 
+		// Group by collection
+		groupedWorks = works.reduce((acc, work) => {
+			const collection = work.collection || 'Uncategorized';
+			if (!acc[collection]) acc[collection] = [];
+			acc[collection].push(work);
+			return acc;
+		}, {});
+
+		// Optionally select all by default
 		selectedWorks = works.map((work) => work.id);
 	});
+
+	function toggleCollection(collection: string, checked: boolean) {
+		const worksInCollection = groupedWorks[collection].map((w) => w.id);
+
+		if (checked) {
+			// Add all works in the collection
+			selectedWorks = Array.from(new Set([...selectedWorks, ...worksInCollection]));
+		} else {
+			// Remove all works in the collection
+			selectedWorks = selectedWorks.filter((id) => !worksInCollection.includes(id));
+		}
+	}
+
+	function isCollectionFullySelected(collection: string) {
+		const worksInCollection = groupedWorks[collection];
+		return worksInCollection.every((w) => selectedWorks.includes(w.id));
+	}
 
 	async function getScriptures(e: Event) {
 		e.preventDefault();
@@ -87,12 +113,14 @@
 				console.log(verses[0]);
 				new_answers +=
 					'<a href="https://www.churchofjesuschrist.org/study/' +
+					verses[0].collectionSlug +
+					'/' +
 					verses[0].workSlug +
 					'/' +
 					verses[0].bookSlug +
 					'/' +
 					verses[0].chapterSlug +
-					(verses[0].workSlug.includes('general-conference') ? '' : '&id=p' + numbers) +
+					(verses[0].collectionSlug == 'general-conference' ? '' : '?id=p' + numbers) +
 					'#p' +
 					(verses[0].number - 1) +
 					'" target="_blank">View on ChurchOfJesusChrist.org</a>\n\n';
@@ -107,16 +135,29 @@
 	}
 </script>
 
-<div class="flex flex-col sm:flex-row justify-around">
-	<div class="flex flex-col gap-8 p-8 sm:p-32">
-		<div class="flex flex-col gap-2">
-			{#each works as work (work.id)}
-				<label class="flex flex-row gap-2">
-					<input type="checkbox" value={work.id} bind:group={selectedWorks} />
-					{work.name}
+<div class="flex flex-col h-screen sm:flex-row justify-around">
+	<div class="flex flex-col gap-2 h-full overflow-auto p-8 sm:p-32">
+		{#each Object.entries(groupedWorks) as [collection, worksInCollection]}
+			<div class="border rounded-xl p-4">
+				<label class="flex items-center gap-2 font-semibold">
+					<input
+						type="checkbox"
+						checked={isCollectionFullySelected(collection)}
+						onchange={(e) => toggleCollection(collection, e.target.checked)}
+					/>
+					{collection}
 				</label>
-			{/each}
-		</div>
+
+				<div class="ml-6 mt-2 flex flex-col gap-1">
+					{#each worksInCollection as work (work.id)}
+						<label class="flex items-center gap-2">
+							<input type="checkbox" value={work.id} bind:group={selectedWorks} />
+							{work.name}
+						</label>
+					{/each}
+				</div>
+			</div>
+		{/each}
 	</div>
 	<div class="flex flex-col items-center justify-between h-screen">
 		<div class="prose py-8 hidden sm:block">

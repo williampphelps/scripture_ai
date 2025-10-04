@@ -20,7 +20,7 @@ export const GET: RequestHandler = async ({ request }) => {
       }
     });
 
-    const result = await db.query("SELECT * FROM work");
+    const result = await db.query("SELECT *, collection.name as collection FROM work ORDER BY number ASC");
 
 
     return json({ works: result[0] });

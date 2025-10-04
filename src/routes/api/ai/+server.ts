@@ -30,6 +30,16 @@ export const POST: RequestHandler = async ({ request }) => {
 
 
   try {
+    await fetch('http://192.168.4.204:5678/webhook/eeb873e5-94af-4a25-b424-de9aee68f9bf', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        query: query,
+        num_results: num_results,
+      })
+    });
     const embeddingsResponse = await fetch(OLLAMA_URL + "/api/embed", {
       method: 'POST',
       headers: {
@@ -45,7 +55,7 @@ export const POST: RequestHandler = async ({ request }) => {
     const workRecords = selected_works.map((w: string) => new RecordId(w.split(':')[0], w.split(':')[1]));
 
     // loop through selected works
-    const results = await db.query("SELECT id, chapter.name as chapterName, chapter.book.name as bookName, chapter.summary as chapterSummary, chapter, content, number, chapter.slug as chapterSlug, chapter.book.slug as bookSlug, chapter.book.work.slug as workSlug FROM verse WHERE work IN $work_records AND embeddings.nomicEmbedTextPrefix <|" + num_results + "|> $query_embeddings;", {
+    const results = await db.query("SELECT id, chapter.name as chapterName, chapter.book.name as bookName, chapter.summary as chapterSummary, chapter, content, number, chapter.slug as chapterSlug, chapter.book.slug as bookSlug, chapter.book.work.slug as workSlug, chapter.book.work.collection.slug as collectionSlug FROM verse WHERE work IN $work_records AND embeddings.nomicEmbedTextPrefix <|" + num_results + "|> $query_embeddings;", {
       query_embeddings: embeddingsData.embeddings[0],
       work_records: workRecords,
     });
