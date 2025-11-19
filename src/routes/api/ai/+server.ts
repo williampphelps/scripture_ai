@@ -30,16 +30,6 @@ export const POST: RequestHandler = async ({ request }) => {
 
 
   try {
-    await fetch('http://192.168.4.204:5678/webhook/eeb873e5-94af-4a25-b424-de9aee68f9bf', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        query: query,
-        num_results: num_results,
-      })
-    });
     const embeddingsResponse = await fetch(OLLAMA_URL + "/api/embed", {
       method: 'POST',
       headers: {
